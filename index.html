@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fichário — suas notas, sempre à mão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:    #DFD0AC;
+    --card:     #FBF7EE;
+    --ink:      #2A231A;
+    --ink-soft: #6B6052;
+    --violet:   #51437A;
+    --violet-soft: #E9E3F4;
+    --rust:     #9C5B3C;
+    --line:     #C7B388;
+    --radius: 3px;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background: var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 3px);
+    color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 32px 20px 80px;
+  }
+
+  .wrap{
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  header{
+    margin-bottom: 32px;
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 14px;
+  }
+
+  h1{
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  h1 .dot{ color: var(--violet); }
+
+  header p{
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  header p.hint{
+    margin-top: 4px;
+    font-size: 12px;
+    opacity: 0.85;
+  }
+  header p.hint code{
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--violet-soft);
+    color: var(--violet);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .header-right{
+    display:flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .io-actions{
+    display:flex;
+    gap: 6px;
+  }
+  .io-btn{
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--violet);
+    border: 1.5px solid var(--violet);
+    border-radius: 4px;
+    padding: 5px 10px;
+    background: transparent;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .io-btn:hover{ background: var(--violet-soft); }
+
+  .io-status{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    min-height: 14px;
+  }
+
+  .count{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 16px;
+  }
+
+  .card{
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 6px 14px -10px rgba(0,0,0,0.25);
+    padding: 22px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
+  }
+
+  .card::before{
+    content:'';
+    position:absolute;
+    top:-1px; left: 14px;
+    width: 46px; height: 9px;
+    background: var(--violet);
+    border-radius: 0 0 3px 3px;
+    opacity: 0.85;
+  }
+  .card:nth-child(3n+2)::before{ background: var(--rust); }
+  .card:nth-child(3n)::before{ background: var(--ink); opacity:0.6; }
+
+  .tag{
+    position:absolute;
+    top: 8px; right: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+
+  .handle{
+    position:absolute;
+    top: 7px; left: 14px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    letter-spacing: -1px;
+    cursor: grab;
+    user-select: none;
+    line-height: 1;
+  }
+  .handle:active{ cursor: grabbing; }
+
+  .card{ transition: opacity 0.15s ease, outline 0.15s ease; }
+  .card.dragging{ opacity: 0.4; }
+  .card.drag-over{
+    outline: 2px dashed var(--violet);
+    outline-offset: 2px;
+  }
+
+  .note-text{
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink);
+    padding: 6px 2px 12px;
+    min-height: 64px;
+    outline: none;
+  }
+  .note-text::placeholder{ color: var(--ink-soft); opacity: 0.7; }
+  .note-text:focus{ background: rgba(81,67,122,0.04); border-radius: 2px; }
+
+  .vars{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 2px 10px;
+  }
+  .var-field{
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .var-field label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--violet);
+    letter-spacing: 0.02em;
+  }
+  .var-field input{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+  }
+  .var-field input:focus{
+    border-color: var(--violet);
+    box-shadow: 0 0 0 2px var(--violet-soft);
+  }
+
+  .card-foot{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 8px;
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+
+  button{
+    font-family: 'Space Grotesk', sans-serif;
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
+
+  .copy-btn{
+    display:flex;
+    align-items:center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--violet);
+    border: 1.5px solid var(--violet);
+    border-radius: 4px;
+    padding: 6px 12px;
+    transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .copy-btn:hover{ background: var(--violet-soft); }
+  .copy-btn .stamp-icon{
+    width: 10px; height: 10px;
+    border: 1.5px solid currentColor;
+    border-radius: 2px;
+    display:inline-block;
+  }
+  .copy-btn.stamped{
+    background: var(--violet);
+    color: #fff;
+    transform: scale(0.96) rotate(-2deg);
+  }
+  .copy-btn.stamped .stamp-icon{
+    background: #fff;
+  }
+
+  .del-btn{
+    font-size: 12px;
+    color: var(--ink-soft);
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .del-btn:hover{ color: var(--rust); background: rgba(156,91,60,0.08); }
+  .del-btn.confirming{
+    color: #fff;
+    background: var(--rust);
+  }
+
+  .foot-actions{
+    display:flex;
+    align-items:center;
+    gap: 2px;
+  }
+
+  .move-btn{
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .move-btn:hover{ color: var(--violet); background: var(--violet-soft); }
+  .move-btn:disabled{ opacity: 0.25; cursor: default; }
+  .move-btn:disabled:hover{ background: none; color: var(--ink-soft); }
+
+  .add-card{
+    border: 1.5px dashed var(--line);
+    background: transparent;
+    box-shadow: none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height: 150px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    font-weight: 600;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .add-card:hover{
+    border-color: var(--violet);
+    color: var(--violet);
+    background: var(--violet-soft);
+  }
+  .add-card .plus{
+    font-size: 20px;
+    margin-right: 8px;
+    line-height: 1;
+  }
+
+  .empty{
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+  .empty strong{ color: var(--ink); display:block; font-size: 16px; margin-bottom: 4px; }
+
+  @media (max-width: 420px){
+    .grid{ grid-template-columns: 1fr; }
+    header{ flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .copy-btn{ transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Fichário<span class="dot">.</span></h1>
+      <p>Guarde trechos de texto e copie quando precisar — sem selecionar nada.</p>
+      <p class="hint">Dica: escreva <code>{{variável}}</code> no texto pra criar um modelo com campos preenchíveis.</p>
+    </div>
+    <div class="header-right">
+      <div class="count" id="count">0 notas</div>
+      <div class="io-actions">
+        <button class="io-btn" id="exportBtn" type="button">Exportar</button>
+        <button class="io-btn" id="importBtn" type="button">Importar</button>
+        <input type="file" id="importInput" accept=".json,application/json" style="display:none">
+      </div>
+      <div class="io-status" id="ioStatus"></div>
+    </div>
+  </header>
+
+  <div class="grid" id="grid">
+    <!-- cartões inseridos via JS -->
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'ficharix-notas-v1';
+  const COUNTER_KEY = 'ficharix-contador-v1';
+
+  let notes = [];
+  let counter = 0;
+
+  try {
+    notes = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    counter = parseInt(localStorage.getItem(COUNTER_KEY) || '0', 10);
+  } catch(e) {
+    notes = [];
+    counter = 0;
+  }
+
+  const grid = document.getElementById('grid');
+  const countEl = document.getElementById('count');
+
+  function persist(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    localStorage.setItem(COUNTER_KEY, String(counter));
+  }
+
+  function extractVars(text){
+    const seen = new Set();
+    const result = [];
+    for(const m of text.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)){
+      const name = m[1].trim();
+      if(name && !seen.has(name)){
+        seen.add(name);
+        result.push(name);
+      }
+    }
+    return result;
+  }
+
+  function fillTemplate(text, vars){
+    return text.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (match, name) => {
+      const key = name.trim();
+      return (vars && vars[key] !== undefined) ? vars[key] : '';
+    });
+  }
+
+  function renderVarFields(container, note, varNames){
+    container.innerHTML = '';
+    if(varNames.length === 0){
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = 'flex';
+    if(!note.vars) note.vars = {};
+    varNames.forEach(varName => {
+      if(!(varName in note.vars)) note.vars[varName] = '';
+      const field = document.createElement('div');
+      field.className = 'var-field';
+
+      const label = document.createElement('label');
+      label.textContent = varName;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = note.vars[varName];
+      input.placeholder = 'preencher ' + varName;
+      input.addEventListener('input', () => {
+        note.vars[varName] = input.value;
+        persist();
+      });
+
+      field.appendChild(label);
+      field.appendChild(input);
+      container.appendChild(field);
+    });
+  }
+
+  function updateTag(tagEl, note, hasVars){
+    tagEl.textContent = 'Nº ' + String(note.num).padStart(4, '0') + (hasVars ? ' · Modelo' : '');
+  }
+
+  function updateCount(){
+    const n = notes.length;
+    countEl.textContent = n === 1 ? '1 nota' : n + ' notas';
+  }
+
+  function autoResize(ta){
+    ta.style.height = 'auto';
+    ta.style.height = (ta.scrollHeight) + 'px';
+  }
+
+  function render(){
+    grid.innerHTML = '';
+    updateCount();
+
+    if(notes.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.innerHTML = '<strong>Seu fichário está vazio.</strong>Adicione um trecho de texto para começar a guardar.';
+      grid.appendChild(empty);
+    } else {
+      notes.forEach(note => grid.appendChild(buildCard(note)));
+    }
+
+    grid.appendChild(buildAddCard());
+  }
+
+  function buildCard(note){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = note.id;
+
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    card.appendChild(tag);
+
+    const handle = document.createElement('span');
+    handle.className = 'handle';
+    handle.textContent = '⠿⠿';
+    handle.title = 'Arrastar para reordenar';
+    handle.setAttribute('aria-hidden', 'true');
+    card.appendChild(handle);
+
+    card.draggable = true;
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'note-text';
+    textarea.placeholder = 'Escreva ou cole o texto aqui... use {{variável}} para criar um modelo';
+    textarea.value = note.text;
+    textarea.rows = 1;
+    card.appendChild(textarea);
+
+    const varsBox = document.createElement('div');
+    varsBox.className = 'vars';
+    card.appendChild(varsBox);
+
+    let currentVars = extractVars(note.text);
+    updateTag(tag, note, currentVars.length > 0);
+    renderVarFields(varsBox, note, currentVars);
+
+    const foot = document.createElement('div');
+    foot.className = 'card-foot';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.innerHTML = '<span class="stamp-icon"></span><span class="label">Copiar</span>';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'del-btn';
+    delBtn.textContent = 'Excluir';
+
+    const upBtn = document.createElement('button');
+    upBtn.className = 'move-btn';
+    upBtn.title = 'Mover para cima';
+    upBtn.textContent = '▲';
+
+    const downBtn = document.createElement('button');
+    downBtn.className = 'move-btn';
+    downBtn.title = 'Mover para baixo';
+    downBtn.textContent = '▼';
+
+    const idx = notes.indexOf(note);
+    if(idx === 0) upBtn.disabled = true;
+    if(idx === notes.length - 1) downBtn.disabled = true;
+
+    const actions = document.createElement('div');
+    actions.className = 'foot-actions';
+    actions.appendChild(upBtn);
+    actions.appendChild(downBtn);
+    actions.appendChild(delBtn);
+
+    foot.appendChild(copyBtn);
+    foot.appendChild(actions);
+    card.appendChild(foot);
+
+    // auto-resize on load
+    requestAnimationFrame(() => autoResize(textarea));
+
+    // save on input (debounced) + auto-resize + atualizar campos de variável
+    let saveTimeout;
+    textarea.addEventListener('input', () => {
+      autoResize(textarea);
+      const newVars = extractVars(textarea.value);
+      const changed = JSON.stringify(newVars) !== JSON.stringify(currentVars);
+      if(changed){
+        currentVars = newVars;
+        updateTag(tag, note, currentVars.length > 0);
+        renderVarFields(varsBox, note, currentVars);
+      }
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        note.text = textarea.value;
+        persist();
+      }, 300);
+    });
+
+    // remove empty new notes on blur
+    textarea.addEventListener('blur', () => {
+      note.text = textarea.value;
+      if(note.text.trim() === '' && note.isNew){
+        notes = notes.filter(n => n.id !== note.id);
+        persist();
+        render();
+      } else {
+        note.isNew = false;
+        persist();
+      }
+    });
+
+    copyBtn.addEventListener('click', () => {
+      const raw = textarea.value;
+      if(!raw.trim()) return;
+      const finalText = currentVars.length > 0 ? fillTemplate(raw, note.vars || {}) : raw;
+      if(!finalText.trim()) return;
+      copyToClipboard(finalText).then(() => {
+        const label = copyBtn.querySelector('.label');
+        copyBtn.classList.add('stamped');
+        label.textContent = 'Copiado ✓';
+        setTimeout(() => {
+          copyBtn.classList.remove('stamped');
+          label.textContent = 'Copiar';
+        }, 1400);
+      });
+    });
+
+    let confirming = false;
+    let confirmTimeout;
+    delBtn.addEventListener('click', () => {
+      if(!confirming){
+        confirming = true;
+        delBtn.textContent = 'Confirmar?';
+        delBtn.classList.add('confirming');
+        confirmTimeout = setTimeout(() => {
+          confirming = false;
+          delBtn.textContent = 'Excluir';
+          delBtn.classList.remove('confirming');
+        }, 2800);
+      } else {
+        clearTimeout(confirmTimeout);
+        notes = notes.filter(n => n.id !== note.id);
+        persist();
+        render();
+      }
+    });
+
+    upBtn.addEventListener('click', () => moveNote(note.id, -1));
+    downBtn.addEventListener('click', () => moveNote(note.id, 1));
+
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', note.id);
+      requestAnimationFrame(() => card.classList.add('dragging'));
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.card.drag-over').forEach(c => c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if(card.classList.contains('dragging')) return;
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const draggedId = e.dataTransfer.getData('text/plain');
+      if(draggedId === note.id) return;
+      reorderNotes(draggedId, note.id);
+    });
+
+    return card;
+  }
+
+  function moveNote(id, delta){
+    const idx = notes.findIndex(n => n.id === id);
+    if(idx === -1) return;
+    const newIdx = idx + delta;
+    if(newIdx < 0 || newIdx >= notes.length) return;
+    const [moved] = notes.splice(idx, 1);
+    notes.splice(newIdx, 0, moved);
+    persist();
+    render();
+  }
+
+  function reorderNotes(draggedId, targetId){
+    const fromIndex = notes.findIndex(n => n.id === draggedId);
+    const toIndex = notes.findIndex(n => n.id === targetId);
+    if(fromIndex === -1 || toIndex === -1) return;
+    const [moved] = notes.splice(fromIndex, 1);
+    notes.splice(toIndex, 0, moved);
+    persist();
+    render();
+  }
+
+  function buildAddCard(){
+    const card = document.createElement('button');
+    card.className = 'card add-card';
+    card.innerHTML = '<span class="plus">+</span><span>Nova nota</span>';
+    card.addEventListener('click', () => {
+      counter += 1;
+      const note = { id: 'n' + Date.now() + Math.random().toString(36).slice(2,6), text: '', num: counter, isNew: true };
+      notes.unshift(note);
+      persist();
+      render();
+      const firstTa = grid.querySelector('.card .note-text');
+      if(firstTa) firstTa.focus();
+    });
+    return card;
+  }
+
+  async function copyToClipboard(text){
+    try{
+      await navigator.clipboard.writeText(text);
+    } catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  }
+
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importInput = document.getElementById('importInput');
+  const ioStatus = document.getElementById('ioStatus');
+
+  let statusTimeout;
+  function showStatus(msg){
+    ioStatus.textContent = msg;
+    clearTimeout(statusTimeout);
+    statusTimeout = setTimeout(() => { ioStatus.textContent = ''; }, 3500);
+  }
+
+  exportBtn.addEventListener('click', () => {
+    if(notes.length === 0){
+      showStatus('Nada pra exportar ainda');
+      return;
+    }
+    const payload = {
+      app: 'fichario',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      counter: counter,
+      notes: notes
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = 'fichario-notas-' + stamp + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showStatus(notes.length + ' nota(s) exportada(s)');
+  });
+
+  importBtn.addEventListener('click', () => importInput.click());
+
+  importInput.addEventListener('change', () => {
+    const file = importInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        const incoming = Array.isArray(data) ? data : data.notes;
+        if(!Array.isArray(incoming)) throw new Error('formato inválido');
+        let added = 0;
+        incoming.forEach((item, i) => {
+          if(!item || typeof item.text !== 'string') return;
+          counter += 1;
+          notes.push({
+            id: 'n' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6),
+            text: item.text,
+            vars: (item.vars && typeof item.vars === 'object') ? item.vars : {},
+            num: counter,
+            isNew: false
+          });
+          added++;
+        });
+        if(added === 0) throw new Error('nenhuma nota válida encontrada');
+        persist();
+        render();
+        showStatus(added + ' nota(s) importada(s)');
+      } catch(e){
+        showStatus('Arquivo inválido');
+      }
+      importInput.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
