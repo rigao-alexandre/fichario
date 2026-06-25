@@ -106,12 +106,66 @@
     min-height: 14px;
   }
 
+  .io-btn.ghost{
+    color: var(--ink-soft);
+    border-color: var(--line);
+  }
+  .io-btn.ghost:hover{ background: rgba(0,0,0,0.05); color: var(--ink); }
+
+  .share-banner{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: var(--violet-soft);
+    border: 1.5px solid var(--violet);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .share-banner-text{
+    flex: 1;
+    min-width: 200px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+    max-height: 90px;
+    overflow-y: auto;
+  }
+  .share-banner-actions{
+    display:flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
   .count{
     font-family: 'IBM Plex Mono', monospace;
     font-size: 13px;
     color: var(--ink-soft);
     white-space: nowrap;
   }
+
+  .search-row{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .search-input{
+    flex: 1;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 4px;
+    background: var(--card);
+    color: var(--ink);
+    outline: none;
+  }
+  .search-input::placeholder{ color: var(--ink-soft); }
+  .search-input:focus{ border-color: var(--violet); }
 
   .grid{
     display: grid;
@@ -188,6 +242,22 @@
   .note-text::placeholder{ color: var(--ink-soft); opacity: 0.7; }
   .note-text:focus{ background: rgba(81,67,122,0.04); border-radius: 2px; }
 
+  .note-title{
+    width: 100%;
+    border: none;
+    border-bottom: 1px dashed var(--line);
+    background: transparent;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink);
+    padding: 2px 2px 6px;
+    margin-top: 2px;
+    outline: none;
+  }
+  .note-title::placeholder{ color: var(--ink-soft); opacity: 0.55; font-weight: 500; }
+  .note-title:focus{ background: rgba(81,67,122,0.04); border-radius: 2px; }
+
   .vars{
     display: flex;
     flex-direction: column;
@@ -225,6 +295,7 @@
     align-items:center;
     justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
     border-top: 1px dashed var(--line);
     padding-top: 10px;
     margin-top: 4px;
@@ -263,6 +334,22 @@
   }
   .copy-btn.stamped .stamp-icon{
     background: #fff;
+  }
+
+  .share-btn{
+    color: var(--rust);
+    border-color: var(--rust);
+  }
+  .share-btn:hover{ background: rgba(156,91,60,0.08); }
+  .share-btn.stamped{
+    background: var(--rust);
+    color: #fff;
+  }
+
+  .foot-primary{
+    display:flex;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
   .del-btn{
@@ -358,6 +445,19 @@
     </div>
   </header>
 
+  <div class="search-row">
+    <input type="text" id="searchInput" class="search-input" placeholder="Buscar por título ou conteúdo...">
+    <button class="io-btn ghost" id="clearSearchBtn" type="button" style="display:none;">Limpar</button>
+  </div>
+
+  <div class="share-banner" id="shareBanner" style="display:none;">
+    <div class="share-banner-text" id="shareBannerText"></div>
+    <div class="share-banner-actions">
+      <button class="io-btn" id="shareAcceptBtn" type="button">Adicionar ao fichário</button>
+      <button class="io-btn ghost" id="shareDismissBtn" type="button">Ignorar</button>
+    </div>
+  </div>
+
   <div class="grid" id="grid">
     <!-- cartões inseridos via JS -->
   </div>
@@ -387,6 +487,10 @@
     localStorage.setItem(COUNTER_KEY, String(counter));
   }
 
+  function normalize(str){
+    return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
   function extractVars(text){
     const seen = new Set();
     const result = [];
@@ -405,6 +509,25 @@
       const key = name.trim();
       return (vars && vars[key] !== undefined) ? vars[key] : '';
     });
+  }
+
+  function b64urlEncode(obj){
+    const bytes = new TextEncoder().encode(JSON.stringify(obj));
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function b64urlDecode(str){
+    const binary = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+    const bytes = new Uint8Array(binary.length);
+    for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  function buildShareLink(text, vars, title){
+    const encoded = b64urlEncode({ text: text, vars: vars || {}, title: title || '' });
+    return location.origin + location.pathname + '#compartilhar=' + encoded;
   }
 
   function renderVarFields(container, note, varNames){
@@ -456,13 +579,22 @@
     grid.innerHTML = '';
     updateCount();
 
+    const filtered = searchQuery
+      ? notes.filter(n => normalize(n.title).includes(searchQuery) || normalize(n.text).includes(searchQuery))
+      : notes;
+
     if(notes.length === 0){
       const empty = document.createElement('div');
       empty.className = 'empty';
       empty.innerHTML = '<strong>Seu fichário está vazio.</strong>Adicione um trecho de texto para começar a guardar.';
       grid.appendChild(empty);
+    } else if(filtered.length === 0){
+      const noResults = document.createElement('div');
+      noResults.className = 'empty';
+      noResults.innerHTML = '<strong>Nenhuma nota encontrada.</strong>Tente outro termo de busca.';
+      grid.appendChild(noResults);
     } else {
-      notes.forEach(note => grid.appendChild(buildCard(note)));
+      filtered.forEach(note => grid.appendChild(buildCard(note)));
     }
 
     grid.appendChild(buildAddCard());
@@ -486,6 +618,13 @@
 
     card.draggable = true;
 
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.className = 'note-title';
+    titleInput.placeholder = 'Título (opcional)';
+    titleInput.value = note.title || '';
+    card.appendChild(titleInput);
+
     const textarea = document.createElement('textarea');
     textarea.className = 'note-text';
     textarea.placeholder = 'Escreva ou cole o texto aqui... use {{variável}} para criar um modelo';
@@ -507,6 +646,10 @@
     const copyBtn = document.createElement('button');
     copyBtn.className = 'copy-btn';
     copyBtn.innerHTML = '<span class="stamp-icon"></span><span class="label">Copiar</span>';
+
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'copy-btn share-btn';
+    shareBtn.innerHTML = '<span class="label">↗ Compartilhar</span>';
 
     const delBtn = document.createElement('button');
     delBtn.className = 'del-btn';
@@ -532,12 +675,26 @@
     actions.appendChild(downBtn);
     actions.appendChild(delBtn);
 
-    foot.appendChild(copyBtn);
+    const primary = document.createElement('div');
+    primary.className = 'foot-primary';
+    primary.appendChild(copyBtn);
+    primary.appendChild(shareBtn);
+
+    foot.appendChild(primary);
     foot.appendChild(actions);
     card.appendChild(foot);
 
     // auto-resize on load
     requestAnimationFrame(() => autoResize(textarea));
+
+    let titleSaveTimeout;
+    titleInput.addEventListener('input', () => {
+      clearTimeout(titleSaveTimeout);
+      titleSaveTimeout = setTimeout(() => {
+        note.title = titleInput.value;
+        persist();
+      }, 300);
+    });
 
     // save on input (debounced) + auto-resize + atualizar campos de variável
     let saveTimeout;
@@ -584,6 +741,35 @@
           label.textContent = 'Copiar';
         }, 1400);
       });
+    });
+
+    shareBtn.addEventListener('click', async () => {
+      const raw = textarea.value;
+      if(!raw.trim()) return;
+      const link = buildShareLink(raw, note.vars, note.title);
+      const label = shareBtn.querySelector('.label');
+
+      function flashShare(msg){
+        shareBtn.classList.add('stamped');
+        label.textContent = msg;
+        setTimeout(() => {
+          shareBtn.classList.remove('stamped');
+          label.textContent = '↗ Compartilhar';
+        }, 1600);
+      }
+
+      if(navigator.share){
+        try{
+          const shareText = currentVars.length > 0 ? fillTemplate(raw, note.vars || {}) : raw;
+          await navigator.share({ title: note.title || undefined, text: shareText, url: link });
+          flashShare('Compartilhado ✓');
+          return;
+        } catch(e){
+          if(e && e.name === 'AbortError') return;
+        }
+      }
+      await copyToClipboard(link);
+      flashShare('Link copiado ✓');
     });
 
     let confirming = false;
@@ -662,8 +848,13 @@
     card.innerHTML = '<span class="plus">+</span><span>Nova nota</span>';
     card.addEventListener('click', () => {
       counter += 1;
-      const note = { id: 'n' + Date.now() + Math.random().toString(36).slice(2,6), text: '', num: counter, isNew: true };
+      const note = { id: 'n' + Date.now() + Math.random().toString(36).slice(2,6), text: '', title: '', vars: {}, num: counter, isNew: true };
       notes.unshift(note);
+      if(searchQuery){
+        searchQuery = '';
+        searchInput.value = '';
+        clearSearchBtn.style.display = 'none';
+      }
       persist();
       render();
       const firstTa = grid.querySelector('.card .note-text');
@@ -691,6 +882,70 @@
   const importBtn = document.getElementById('importBtn');
   const importInput = document.getElementById('importInput');
   const ioStatus = document.getElementById('ioStatus');
+
+  const searchInput = document.getElementById('searchInput');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
+  let searchQuery = '';
+
+  searchInput.addEventListener('input', () => {
+    searchQuery = normalize(searchInput.value.trim());
+    clearSearchBtn.style.display = searchInput.value ? 'inline-block' : 'none';
+    render();
+  });
+
+  clearSearchBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchQuery = '';
+    clearSearchBtn.style.display = 'none';
+    render();
+    searchInput.focus();
+  });
+
+  const shareBanner = document.getElementById('shareBanner');
+  const shareBannerText = document.getElementById('shareBannerText');
+  const shareAcceptBtn = document.getElementById('shareAcceptBtn');
+  const shareDismissBtn = document.getElementById('shareDismissBtn');
+  let pendingShare = null;
+
+  function checkIncomingShare(){
+    const match = location.hash.match(/compartilhar=([^&]+)/);
+    if(!match) return;
+    history.replaceState(null, '', location.pathname + location.search);
+    try{
+      const payload = b64urlDecode(match[1]);
+      if(typeof payload.text !== 'string') throw new Error('formato inválido');
+      pendingShare = payload;
+      const body = payload.text.length > 220 ? payload.text.slice(0, 220) + '…' : payload.text;
+      const titlePart = payload.title ? '"' + payload.title + '" — ' : '';
+      shareBannerText.textContent = 'Alguém compartilhou uma nota com você: ' + titlePart + '"' + body + '"';
+      shareBanner.style.display = 'flex';
+    } catch(e){
+      // link inválido ou corrompido — ignora silenciosamente
+    }
+  }
+
+  shareAcceptBtn.addEventListener('click', () => {
+    if(!pendingShare) return;
+    counter += 1;
+    notes.unshift({
+      id: 'n' + Date.now() + Math.random().toString(36).slice(2, 6),
+      text: pendingShare.text,
+      title: typeof pendingShare.title === 'string' ? pendingShare.title : '',
+      vars: (pendingShare.vars && typeof pendingShare.vars === 'object') ? pendingShare.vars : {},
+      num: counter,
+      isNew: false
+    });
+    persist();
+    render();
+    shareBanner.style.display = 'none';
+    pendingShare = null;
+    showStatus('Nota adicionada ao fichário');
+  });
+
+  shareDismissBtn.addEventListener('click', () => {
+    shareBanner.style.display = 'none';
+    pendingShare = null;
+  });
 
   let statusTimeout;
   function showStatus(msg){
@@ -742,6 +997,7 @@
           notes.push({
             id: 'n' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6),
             text: item.text,
+            title: typeof item.title === 'string' ? item.title : '',
             vars: (item.vars && typeof item.vars === 'object') ? item.vars : {},
             num: counter,
             isNew: false
@@ -760,6 +1016,7 @@
     reader.readAsText(file);
   });
 
+  checkIncomingShare();
   render();
 })();
 </script>
