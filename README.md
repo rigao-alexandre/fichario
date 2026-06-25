@@ -1,3 +1,5 @@
+https://fichario.netlify.app/
+
 # Fichário 🗂️
 
 Um app de notas bem simples para guardar trechos de texto que você usa com frequência — respostas prontas, mensagens, comandos, modelos de e-mail — e copiar com um clique, sem precisar selecionar nada.
@@ -19,18 +21,17 @@ https://fichario.netlify.app/
 
 ## 🚀 Como usar
 
+### SaaS
+
+https://fichario.netlify.app/
+
 ### Localmente
 
 Baixe o arquivo `index.html` e abra direto no navegador (duplo clique).
 
-### Hospedado (recomendado)
+### Hospedado
 
-Como é um arquivo estático, qualquer serviço de hospedagem gratuita funciona:
-
-- **[Netlify Drop](https://app.netlify.com/drop)** — arraste o arquivo (renomeado pra `index.html`) e pronto, sem precisar de conta
-- **GitHub Pages** — suba este repositório e ative o Pages nas configurações
-- **Vercel** ou **Cloudflare Pages** — conecte o repositório ou faça upload direto
-- **[Surge.sh](https://surge.sh/)** — `npm install -g surge` e depois `surge`
+Como é um arquivo estático, qualquer serviço de hospedagem gratuita funciona.
 
 > A funcionalidade de compartilhar por link (veja abaixo) só funciona de verdade entre dispositivos diferentes se o app estiver hospedado. Abrindo o arquivo localmente, o link gerado só funciona no seu próprio computador.
 
