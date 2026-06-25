@@ -21,6 +21,8 @@ https://fichario.netlify.app/
 
 ## 🚀 Como usar
 
+> A funcionalidade de compartilhar por link (veja abaixo) só funciona de verdade entre dispositivos diferentes se o app estiver hospedado. Abrindo o arquivo localmente, o link gerado só funciona no seu próprio computador.
+
 ### SaaS
 
 https://fichario.netlify.app/
@@ -32,8 +34,6 @@ Baixe o arquivo `index.html` e abra direto no navegador (duplo clique).
 ### Hospedado
 
 Como é um arquivo estático, qualquer serviço de hospedagem gratuita funciona.
-
-> A funcionalidade de compartilhar por link (veja abaixo) só funciona de verdade entre dispositivos diferentes se o app estiver hospedado. Abrindo o arquivo localmente, o link gerado só funciona no seu próprio computador.
 
 ## 📝 Modelos com variáveis
 
@@ -78,6 +78,16 @@ Use isso para:
 - Não há sincronização automática entre dispositivos; use exportar/importar ou compartilhar por link para mover notas entre eles
 - Nenhum dado é enviado a servidor algum — é só HTML, CSS e JavaScript
 
+## 🔒 Segurança e dados sensíveis
+
+O `localStorage` **não é criptografado** e não tem nenhuma proteção própria do navegador:
+
+- Qualquer script que rode na mesma origem (ex: uma extensão de navegador maliciosa, ou um ataque de XSS caso o app seja modificado) consegue ler tudo que está salvo
+- Quem tiver acesso físico ao computador/navegador (sessão aberta, perfil compartilhado) também consegue abrir o DevTools e ver as notas em texto puro
+- O arquivo `.json` exportado e o link de compartilhamento (codificado em base64url, **não criptografado**) também guardam o conteúdo em texto legível — qualquer pessoa com o link ou o arquivo consegue ler
+
+**Não guarde senhas, dados bancários, documentos pessoais ou qualquer informação sensível no Fichário.** Ele foi pensado para trechos de texto do dia a dia (respostas prontas, modelos, comandos), não como cofre de senhas.
+
 ## 🛠️ Stack
 
 HTML + CSS + JavaScript puro. Fontes via Google Fonts (Space Grotesk e IBM Plex Mono). Nenhuma dependência externa de runtime.
@@ -92,6 +102,7 @@ Ideias para o futuro, sem prazo definido:
 - [ ] Modo escuro
 - [ ] Múltiplos fichários / pastas
 - [ ] Ver nota (possibilita salvar nos favoritos)
+- [ ] Criptografia opcional com senha mestre (Web Crypto API) para notas no `localStorage`
 
 Sugestões são bem-vindas via issue ou pull request.
 
