@@ -760,6 +760,8 @@
               )
             : notes;
 
+          grid.appendChild(buildAddCard());
+
           if (notes.length === 0) {
             const empty = document.createElement("div");
             empty.className = "empty";
@@ -775,8 +777,6 @@
           } else {
             filtered.forEach((note) => grid.appendChild(buildCard(note)));
           }
-
-          grid.appendChild(buildAddCard());
         }
 
         function buildCard(note) {
