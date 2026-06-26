@@ -760,8 +760,6 @@
               )
             : notes;
 
-          grid.appendChild(buildAddCard());
-
           if (notes.length === 0) {
             const empty = document.createElement("div");
             empty.className = "empty";
@@ -777,6 +775,8 @@
           } else {
             filtered.forEach((note) => grid.appendChild(buildCard(note)));
           }
+
+          grid.appendChild(buildAddCard());
         }
 
         function buildCard(note) {
@@ -898,17 +898,9 @@
             }, 300);
           });
 
-          // remove empty new notes on blur
           textarea.addEventListener("blur", () => {
             note.text = textarea.value;
-            if (note.text.trim() === "" && note.isNew) {
-              notes = notes.filter((n) => n.id !== note.id);
-              persist();
-              render();
-            } else {
-              note.isNew = false;
-              persist();
-            }
+            persist();
           });
 
           copyBtn.addEventListener("click", () => {
@@ -1052,9 +1044,8 @@
               title: "",
               vars: {},
               num: counter,
-              isNew: true,
             };
-            notes.unshift(note);
+            notes.push(note);
             if (searchQuery) {
               searchQuery = "";
               searchInput.value = "";
@@ -1062,8 +1053,10 @@
             }
             persist();
             render();
-            const firstTa = grid.querySelector(".card .note-text");
-            if (firstTa) firstTa.focus();
+            const newTa = grid.querySelector(
+              '.card[data-id="' + note.id + '"] .note-text',
+            );
+            if (newTa) newTa.focus();
           });
           return card;
         }
@@ -1153,7 +1146,6 @@
                 ? pendingShare.vars
                 : {},
             num: counter,
-            isNew: false,
           });
           persist();
           render();
@@ -1230,7 +1222,6 @@
                   vars:
                     item.vars && typeof item.vars === "object" ? item.vars : {},
                   num: counter,
-                  isNew: false,
                 });
                 added++;
               });
