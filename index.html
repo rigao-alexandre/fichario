@@ -249,6 +249,12 @@
         cursor: pointer;
         display: inline-block;
         overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+      .card:hover .accent-swatch,
+      .card:focus-within .accent-swatch {
+        opacity: 1;
       }
       .accent-swatch input[type="color"] {
         position: absolute;
@@ -462,10 +468,9 @@
         background: var(--rust);
         color: #fff;
       }
-
       .icon-btn {
         padding: 5px 9px;
-        font-size: 14px;
+        font-size: 17px;
         line-height: 1;
       }
 
@@ -476,10 +481,13 @@
       }
 
       .del-btn {
-        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
         line-height: 1;
         color: var(--ink-soft);
-        padding: 4px 7px;
+        padding: 5px 8px;
         border-radius: 4px;
         transition:
           color 0.15s ease,
@@ -493,17 +501,82 @@
         color: #fff;
         background: var(--rust);
       }
+      .trash-icon {
+        position: relative;
+        width: 10px;
+        height: 11px;
+        display: inline-block;
+        flex-shrink: 0;
+      }
+      .trash-icon::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -1px;
+        width: 12px;
+        height: 1.5px;
+        background: currentColor;
+      }
+      .trash-icon::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 1px;
+        width: 8px;
+        height: 9px;
+        border: 1.5px solid currentColor;
+        border-top: none;
+        border-radius: 0 0 2px 2px;
+      }
 
-      .foot-actions {
-        display: flex;
-        align-items: center;
+      .more-wrap {
+        position: relative;
+      }
+
+      .more-btn {
+        font-size: 16px;
+        line-height: 1;
+        color: var(--ink-soft);
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition:
+          color 0.15s ease,
+          background 0.15s ease;
+      }
+      .more-btn:hover,
+      .more-btn.active {
+        color: var(--violet);
+        background: var(--violet-soft);
+      }
+
+      .more-menu {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 6px);
+        right: 0;
+        flex-direction: column;
         gap: 2px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.25);
+        padding: 6px;
+        z-index: 5;
+        min-width: 130px;
+      }
+      .more-menu.open {
+        display: flex;
       }
 
       .move-btn {
-        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        text-align: left;
+        font-size: 12px;
         color: var(--ink-soft);
-        padding: 4px 6px;
+        padding: 5px 8px;
         border-radius: 4px;
         transition:
           color 0.15s ease,
@@ -667,6 +740,14 @@
 
         const grid = document.getElementById("grid");
         const countEl = document.getElementById("count");
+
+        document.addEventListener("click", (e) => {
+          if (e.target.closest(".more-wrap")) return;
+          document.querySelectorAll(".more-menu.open").forEach((m) => {
+            m.classList.remove("open");
+            m.parentElement.querySelector(".more-btn").classList.remove("active");
+          });
+        });
 
         function persist() {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
@@ -885,31 +966,54 @@
           const shareBtn = document.createElement("button");
           shareBtn.className = "copy-btn share-btn icon-btn";
           shareBtn.title = "Compartilhar";
-          shareBtn.innerHTML = '<span class="label">📤</span>';
+          shareBtn.innerHTML = '<span class="label">↗</span>';
 
           const delBtn = document.createElement("button");
           delBtn.className = "del-btn";
           delBtn.title = "Excluir";
-          delBtn.textContent = "🗑️";
+          delBtn.innerHTML = '<span class="trash-icon"></span><span class="label">Excluir</span>';
 
           const upBtn = document.createElement("button");
           upBtn.className = "move-btn";
           upBtn.title = "Mover para cima";
-          upBtn.textContent = "▲";
+          upBtn.textContent = "▲ Mover para cima";
 
           const downBtn = document.createElement("button");
           downBtn.className = "move-btn";
           downBtn.title = "Mover para baixo";
-          downBtn.textContent = "▼";
+          downBtn.textContent = "▼ Mover para baixo";
 
           if (idx === 0) upBtn.disabled = true;
           if (idx === notes.length - 1) downBtn.disabled = true;
 
-          const actions = document.createElement("div");
-          actions.className = "foot-actions";
-          actions.appendChild(upBtn);
-          actions.appendChild(downBtn);
-          actions.appendChild(delBtn);
+          const moreBtn = document.createElement("button");
+          moreBtn.className = "more-btn";
+          moreBtn.title = "Mais ações";
+          moreBtn.textContent = "⋯";
+
+          const moreMenu = document.createElement("div");
+          moreMenu.className = "more-menu";
+          moreMenu.appendChild(upBtn);
+          moreMenu.appendChild(downBtn);
+          moreMenu.appendChild(delBtn);
+
+          const moreWrap = document.createElement("div");
+          moreWrap.className = "more-wrap";
+          moreWrap.appendChild(moreBtn);
+          moreWrap.appendChild(moreMenu);
+
+          moreBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const willOpen = !moreMenu.classList.contains("open");
+            document.querySelectorAll(".more-menu.open").forEach((m) => {
+              m.classList.remove("open");
+              m.parentElement.querySelector(".more-btn").classList.remove("active");
+            });
+            if (willOpen) {
+              moreMenu.classList.add("open");
+              moreBtn.classList.add("active");
+            }
+          });
 
           const primary = document.createElement("div");
           primary.className = "foot-primary";
@@ -917,7 +1021,7 @@
           primary.appendChild(shareBtn);
 
           foot.appendChild(primary);
-          foot.appendChild(actions);
+          foot.appendChild(moreWrap);
           card.appendChild(foot);
 
           // auto-resize on load
@@ -984,7 +1088,7 @@
               label.textContent = msg;
               setTimeout(() => {
                 shareBtn.classList.remove("stamped");
-                label.textContent = "📤";
+                label.textContent = "↗";
               }, 1600);
             }
 
@@ -1009,18 +1113,20 @@
             flashShare("🔗✅");
           });
 
+          const delLabel = delBtn.querySelector(".label");
           let confirming = false;
           let confirmTimeout;
-          delBtn.addEventListener("click", () => {
+          delBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
             if (!confirming) {
               confirming = true;
               delBtn.title = "Confirmar exclusão?";
-              delBtn.textContent = "🗑️❓";
+              delLabel.textContent = "Confirmar?";
               delBtn.classList.add("confirming");
               confirmTimeout = setTimeout(() => {
                 confirming = false;
                 delBtn.title = "Excluir";
-                delBtn.textContent = "🗑️";
+                delLabel.textContent = "Excluir";
                 delBtn.classList.remove("confirming");
               }, 2800);
             } else {
