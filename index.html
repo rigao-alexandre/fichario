@@ -232,6 +232,34 @@
         background: var(--ink);
         opacity: 0.6;
       }
+      .card.has-accent::before {
+        background: var(--accent-color);
+        opacity: 1;
+      }
+
+      .accent-swatch {
+        position: absolute;
+        top: -2px;
+        left: 64px;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        border: 1.5px solid var(--card);
+        box-shadow: 0 0 0 1px var(--line);
+        cursor: pointer;
+        display: inline-block;
+        overflow: hidden;
+      }
+      .accent-swatch input[type="color"] {
+        position: absolute;
+        inset: -4px;
+        width: calc(100% + 8px);
+        height: calc(100% + 8px);
+        opacity: 0;
+        cursor: pointer;
+        padding: 0;
+        border: none;
+      }
 
       .tag {
         position: absolute;
@@ -624,6 +652,7 @@
       (function () {
         const STORAGE_KEY = "ficharix-notas-v1";
         const COUNTER_KEY = "ficharix-contador-v1";
+        const DEFAULT_ACCENTS = ["#51437a", "#9c5b3c", "#2a231a"];
 
         let notes = [];
         let counter = 0;
@@ -795,6 +824,31 @@
           handle.setAttribute("aria-hidden", "true");
           card.appendChild(handle);
 
+          const idx = notes.indexOf(note);
+
+          const swatchLabel = document.createElement("label");
+          swatchLabel.className = "accent-swatch";
+          swatchLabel.title = "Cor do detalhe";
+          const colorInput = document.createElement("input");
+          colorInput.type = "color";
+          colorInput.value = note.color || DEFAULT_ACCENTS[idx % 3];
+          swatchLabel.style.background = colorInput.value;
+          swatchLabel.appendChild(colorInput);
+          card.appendChild(swatchLabel);
+
+          if (note.color) {
+            card.classList.add("has-accent");
+            card.style.setProperty("--accent-color", note.color);
+          }
+
+          colorInput.addEventListener("input", () => {
+            note.color = colorInput.value;
+            swatchLabel.style.background = note.color;
+            card.classList.add("has-accent");
+            card.style.setProperty("--accent-color", note.color);
+            persist();
+          });
+
           card.draggable = true;
 
           const titleInput = document.createElement("input");
@@ -848,7 +902,6 @@
           downBtn.title = "Mover para baixo";
           downBtn.textContent = "▼";
 
-          const idx = notes.indexOf(note);
           if (idx === 0) upBtn.disabled = true;
           if (idx === notes.length - 1) downBtn.disabled = true;
 
